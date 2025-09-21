@@ -1,0 +1,6 @@
+#define SECRET_MQTT_HOST ""
+#define SECRET_MQTT_PASSWORD ""
+#define SECRET_MQTT_USERNAME ""
+
+#define SECRET_WIFI_NAME ""
+#define SECRET_WIFI_PASSWORD ""
