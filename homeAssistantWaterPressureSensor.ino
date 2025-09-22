@@ -59,26 +59,29 @@ void loop()
   // ENSURE THE MQTT CONNECTION STAYS OPEN
   mqttClient.poll();
 
+  // RUN ON AN INTERVAL, NOT A DELAY
   unsigned long currentTime = millis();
   if (!(currentTime - previousTime >= PROGRAM_INTERVAL))
   {
     return;
   }
+  previousTime = currentTime;
 
   checkWifiConnection();
+  checkMQTTConnection();
 
   Serial.println("Attempting to gather reading and send to the MQTT host...");
-  previousTime = currentTime;
+  
   int psiReading = convertAnalogPressureInputToPSI(analogRead(PRESSURE_SENSOR_ANALOG_PIN));
   char psiReadingString[5];
   itoa(psiReading, psiReadingString, 10);
 
   mqttClient.beginMessage(MQTT_TOPIC);
-  mqttClient.println(psiReadingString);
+  mqttClient.print(psiReadingString);
   mqttClient.endMessage();
+
   updateLedMatrixText(psiReadingString);
   Serial.println("Successfully sent reading to the MQTT host...");
-  
 }
 
 // PROGRAM FUNCTIONS ====================================================================
@@ -97,6 +100,19 @@ void checkWifiConnection()
   connectToWiFi();
 
   connectToMQTTHost();
+}
+
+void checkMQTTConnection()
+{
+  int retryAttempts = 5;
+  while (mqttClient.connected() == 0)
+  {
+    if (!wifiClient.connected())
+    {
+      break;
+    }
+    connectToMQTTHost();
+  }
 }
 
 void connectToWiFi()
@@ -122,13 +138,14 @@ void connectToWiFi()
     Serial.println("...");
     // ATTEMPT TO CONNECT TO THE WPA/WPA2 NETWORK
     currentWiFiStatus = WiFi.begin(WIFI_NAME, WIFI_PASSWORD);
-    delay(5000);
+    delay(5000); // GIVE TIME FOR CONNECTION TO ESTABLISH BEFORE DOING ANYTHING ELSE...
     if (currentWiFiStatus != WL_CONNECTED)
     {
       Serial.println("Retrying Wifi connection...");
       displayScrollingTextOnLEDMatrix("Retrying Wifi connection...");
     }
   }
+
   Serial.print("Successfully Connected to ");
   Serial.print(WIFI_NAME);
   Serial.println("...");
@@ -149,11 +166,8 @@ void connectToMQTTHost()
   {
     Serial.println("Unable to connect to MQTT host, please restart...");
     Serial.println(mqttClient.connectError());
-    WiFi.disconnect();
-    while (true)
-    {
-      displayScrollingTextOnLEDMatrix("Unable to connect to MQTT, restart board...");
-    }
+    displayScrollingTextOnLEDMatrix("Unable to connect to MQTT, restart board...");
+    return;
   }
 
   Serial.println("Successfully connected to MQTT host...");
