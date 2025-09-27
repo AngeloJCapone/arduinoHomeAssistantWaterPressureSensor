@@ -104,12 +104,18 @@ void checkWifiConnection()
 
 void checkMQTTConnection()
 {
-  int retryAttempts = 5;
-  while (mqttClient.connected() == 0)
+  Serial.println("Checking mqtt connection: ");
+  Serial.println(mqttClient.connected());
+  Serial.println(mqttClient.connected() <= 0);
+  while (mqttClient.connected() <= 0)
   {
-    if (!wifiClient.connected())
+    Serial.println("Inside mqtt loop");
+    if (WiFi.status() != WL_CONNECTED)
     {
+      Serial.println("Unable to check mqtt connection, no wifi found");
+      Serial.println(wifiClient.connected());
       break;
+
     }
     connectToMQTTHost();
   }
@@ -164,9 +170,12 @@ void connectToMQTTHost()
   Serial.println("...");
   if (!mqttClient.connect(MQTT_HOST, MQTT_PORT))
   {
-    Serial.println("Unable to connect to MQTT host, please restart...");
+    Serial.println("Unable to connect to MQTT host");
     Serial.println(mqttClient.connectError());
-    displayScrollingTextOnLEDMatrix("Unable to connect to MQTT, restart board...");
+    displayScrollingTextOnLEDMatrix("Unable to connect to MQTT host");
+    char mqttConnectionStatusString[5];
+    itoa(mqttClient.connectError(), mqttConnectionStatusString, 10);
+    displayScrollingTextOnLEDMatrix(mqttConnectionStatusString);
     return;
   }
 
