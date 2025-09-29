@@ -7,11 +7,11 @@
 
 const int ANALOG_INPUT_SENSITIVITY = 1024;
 
-const char MQTT_CLIENT_ID[] = "WaterPressureSensor";
+const char MQTT_CLIENT_ID_PREFIX[] = "waterpressuresensor";
 const char MQTT_HOST[] = SECRET_MQTT_HOST;
 const int MQTT_PORT = 1883;
 const char MQTT_PASSWORD[] = SECRET_MQTT_PASSWORD;
-const char MQTT_TOPIC[] = "arduino/waterPressureSensor";
+const char MQTT_TOPIC[] = "homeassistant/arduino/waterPressureSensor";
 const char MQTT_USERNAME[] = SECRET_MQTT_USERNAME;
 
 const int PRESSURE_SENSOR_ANALOG_PIN = A3;
@@ -76,7 +76,7 @@ void loop()
   char psiReadingString[5];
   itoa(psiReading, psiReadingString, 10);
 
-  mqttClient.beginMessage(MQTT_TOPIC);
+  mqttClient.beginMessage(MQTT_TOPIC, true);
   mqttClient.print(psiReadingString);
   mqttClient.endMessage();
 
@@ -162,7 +162,8 @@ void connectToMQTTHost()
 {
   displayScrollingTextOnLEDMatrix("Connecting to MQTT...");
 
-  mqttClient.setId(MQTT_CLIENT_ID);
+  char* newId = createUniqueMqttId();
+  mqttClient.setId(newId);
   mqttClient.setUsernamePassword(MQTT_USERNAME, MQTT_PASSWORD);
 
   Serial.print("Attempting to connect to the local MQTT host ");
@@ -207,6 +208,22 @@ int convertAnalogPressureInputToPSI(int analogPressureSensorReading)
 
   Serial.println("-----------------------------------");
   return round(psi);
+}
+
+char* createUniqueMqttId()
+{
+  long currentTime = millis();
+  char millisString[(int)floor(log10(abs(currentTime)))+1];
+  ltoa(millis(), millisString, 10);
+  Serial.println(millisString);
+  char* newId = (char*)malloc(strlen(MQTT_CLIENT_ID_PREFIX) + strlen(millisString) + 1);
+  strcpy(newId, MQTT_CLIENT_ID_PREFIX);
+  strcat(newId, millisString);
+
+  Serial.print("Generated new Mqtt Id: ");
+  Serial.println(newId);
+
+  return newId;
 }
 
 void initializeLEDMatrix()
